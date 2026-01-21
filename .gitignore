@@ -11,6 +11,7 @@ __pycache__/
 # Generated files
 *.docx
 cv_data.json
+cv_data_es.json
 
 # IDE
 .vscode/

@@ -38,9 +38,33 @@ class CVGenerator:
         'small': Pt(10),
     }
     
-    def __init__(self, data: dict):
-        """Initialize with CV data dictionary."""
+    # Translations for section headers
+    TRANSLATIONS = {
+        'en': {
+            'professional_summary': 'Professional Summary',
+            'technical_skills': 'Technical Skills',
+            'professional_experience': 'Professional Experience',
+            'education': 'Education',
+            'certifications_languages': 'Certifications & Languages',
+            'certifications': 'Certifications',
+            'languages': 'Languages',
+        },
+        'es': {
+            'professional_summary': 'Resumen Profesional',
+            'technical_skills': 'Habilidades Técnicas',
+            'professional_experience': 'Experiencia Profesional',
+            'education': 'Educación',
+            'certifications_languages': 'Certificaciones e Idiomas',
+            'certifications': 'Certificaciones',
+            'languages': 'Idiomas',
+        }
+    }
+    
+    def __init__(self, data: dict, language: str = 'en'):
+        """Initialize with CV data dictionary and language."""
         self.data = data
+        self.lang = language if language in self.TRANSLATIONS else 'en'
+        self.t = self.TRANSLATIONS[self.lang]
         self.doc = Document()
         self._setup_document()
     
@@ -147,7 +171,7 @@ class CVGenerator:
         if not summary_text:
             return
         
-        self._add_section_heading("Professional Summary")
+        self._add_section_heading(self.t['professional_summary'])
         
         p = self.doc.add_paragraph()
         p.paragraph_format.space_after = Pt(4)
@@ -161,7 +185,7 @@ class CVGenerator:
         if not skills:
             return
         
-        self._add_section_heading("Technical Skills")
+        self._add_section_heading(self.t['technical_skills'])
         
         # Compact format: Category: skill1, skill2, skill3
         for category, skill_list in skills.items():
@@ -183,7 +207,7 @@ class CVGenerator:
         if not experience:
             return
         
-        self._add_section_heading("Professional Experience")
+        self._add_section_heading(self.t['professional_experience'])
         
         for job in experience:
             # Job header
@@ -222,7 +246,7 @@ class CVGenerator:
         if not education:
             return
         
-        self._add_section_heading("Education")
+        self._add_section_heading(self.t['education'])
         
         for edu in education:
             p = self.doc.add_paragraph()
@@ -251,7 +275,7 @@ class CVGenerator:
             return
         
         # Combined section header
-        self._add_section_heading("Certifications & Languages")
+        self._add_section_heading(self.t['certifications_languages'])
         
         p = self.doc.add_paragraph()
         p.paragraph_format.space_before = Pt(4)
@@ -262,12 +286,12 @@ class CVGenerator:
         
         # Certifications inline
         if certs:
-            parts.append(f"Certifications: {', '.join(certs)}")
+            parts.append(f"{self.t['certifications']}: {', '.join(certs)}")
         
         # Languages inline
         if languages:
             lang_strs = [f"{l['language']} ({l['level']})" for l in languages]
-            parts.append(f"Languages: {', '.join(lang_strs)}")
+            parts.append(f"{self.t['languages']}: {', '.join(lang_strs)}")
         
         run = p.add_run("  •  ".join(parts))
         run.font.size = self.FONT_SIZES['body']
@@ -300,6 +324,12 @@ def main():
         default='CV_Optimized_ATS.docx',
         help='Output path for the generated Word document (default: CV_Optimized_ATS.docx)'
     )
+    parser.add_argument(
+        '--lang', '-l',
+        default='en',
+        choices=['en', 'es'],
+        help='Language for section headers: en (English) or es (Spanish) (default: en)'
+    )
     
     args = parser.parse_args()
     
@@ -325,8 +355,9 @@ def main():
         data = json.load(f)
     
     # Generate CV
-    print(f"Generating ATS-optimized CV...")
-    generator = CVGenerator(data)
+    lang_name = 'English' if args.lang == 'en' else 'Spanish'
+    print(f"Generating ATS-optimized CV in {lang_name}...")
+    generator = CVGenerator(data, language=args.lang)
     generator.generate(str(output_path))
     
     print(f"CV successfully generated: {output_path.name}")

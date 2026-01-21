@@ -6,6 +6,7 @@ Generate professional, **ATS-friendly** (Applicant Tracking System) CVs in Word 
 
 - **ATS-Optimized**: Clean, single-column layout that ATS systems can parse easily
 - **Single Page**: Compact design that fits everything on one page
+- **Multi-Language**: Generate CVs in English or Spanish
 - **Customizable**: Edit `cv_data.json` with your information
 - **Professional Design**: Clean typography with proper hierarchy
 - **Easy to Use**: Just edit JSON and run the script
@@ -45,22 +46,26 @@ Edit the `cv_data.json` file with your information:
 ### 3. Generate Your CV
 
 ```bash
+# English (default)
 python generate_cv.py
-```
 
-Or specify custom input/output:
+# Spanish
+python generate_cv.py --lang es
 
-```bash
-python generate_cv.py --input my_data.json --output my_cv.docx
+# Spanish with Spanish data file
+python generate_cv.py --input cv_data_es.json --lang es --output CV_Spanish.docx
 ```
 
 ## 📁 Project Structure
 
 ```
-├── generate_cv.py      # Main CV generator script
-├── cv_data.json        # Your CV data (edit this!)
-├── requirements.txt    # Python dependencies
-└── README.md          # This file
+├── generate_cv.py        # Main CV generator script
+├── cv_data.json          # Your CV data in English (edit this!)
+├── cv_data_es.json       # Your CV data in Spanish (optional)
+├── cv_data_template.json # Empty template to get started
+├── requirements.txt      # Python dependencies
+├── LICENSE               # MIT License
+└── README.md             # This file
 ```
 
 ## 📋 JSON Schema
@@ -148,6 +153,26 @@ python generate_cv.py --input my_data.json --output my_cv.docx
 |--------|-------|---------|-------------|
 | `--input` | `-i` | `cv_data.json` | Input JSON file path |
 | `--output` | `-o` | `CV_Optimized_ATS.docx` | Output Word file path |
+| `--lang` | `-l` | `en` | Language for section headers (`en` or `es`) |
+
+## 🌍 Multi-Language Support
+
+The generator supports **English** and **Spanish** section headers:
+
+| English | Spanish |
+|---------|--------|
+| Professional Summary | Resumen Profesional |
+| Technical Skills | Habilidades Técnicas |
+| Professional Experience | Experiencia Profesional |
+| Education | Educación |
+| Certifications & Languages | Certificaciones e Idiomas |
+
+### Full Spanish CV
+
+To generate a CV entirely in Spanish:
+
+1. Create a `cv_data_es.json` with all content in Spanish
+2. Run: `python generate_cv.py -i cv_data_es.json -l es -o CV_Spanish.docx`
 
 ## 🤝 Contributing
 
