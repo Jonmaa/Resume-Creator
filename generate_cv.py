@@ -16,6 +16,7 @@ from pathlib import Path
 from docx import Document
 from docx.shared import Pt, Inches, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
@@ -60,11 +61,12 @@ class CVGenerator:
         }
     }
     
-    def __init__(self, data: dict, language: str = 'en'):
-        """Initialize with CV data dictionary and language."""
+    def __init__(self, data: dict, language: str = 'en', photo_path: str = None):
+        """Initialize with CV data dictionary, language, and optional photo."""
         self.data = data
         self.lang = language if language in self.TRANSLATIONS else 'en'
         self.t = self.TRANSLATIONS[self.lang]
+        self.photo_path = photo_path
         self.doc = Document()
         self._setup_document()
     
@@ -110,60 +112,147 @@ class CVGenerator:
         run.font.size = self.FONT_SIZES['body']
         return p
     
+    def _remove_table_borders(self, table):
+        """Remove all borders from a table."""
+        tbl = table._tbl
+        tblPr = tbl.tblPr if tbl.tblPr is not None else OxmlElement('w:tblPr')
+        tblBorders = OxmlElement('w:tblBorders')
+        for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+            border = OxmlElement(f'w:{border_name}')
+            border.set(qn('w:val'), 'nil')
+            tblBorders.append(border)
+        tblPr.append(tblBorders)
+        if tbl.tblPr is None:
+            tbl.insert(0, tblPr)
+
     def build_header(self):
-        """Build the header section with name, title, and contact info."""
+        """Build the header section with name, title, contact info, and optional photo."""
         personal = self.data.get('personal', {})
         
-        # Name
-        name_p = self.doc.add_paragraph()
-        name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        name_p.paragraph_format.space_after = Pt(2)
-        name_run = name_p.add_run(personal.get('name', 'Your Name').upper())
-        name_run.bold = True
-        name_run.font.size = self.FONT_SIZES['name']
-        name_run.font.color.rgb = self.COLORS['primary']
+        # Check if photo exists
+        has_photo = self.photo_path and Path(self.photo_path).exists()
         
-        # Title
-        title_p = self.doc.add_paragraph()
-        title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        title_p.paragraph_format.space_before = Pt(0)
-        title_p.paragraph_format.space_after = Pt(6)
-        title_run = title_p.add_run(personal.get('title', 'Professional Title'))
-        title_run.font.size = self.FONT_SIZES['title']
-        title_run.font.color.rgb = self.COLORS['secondary']
+        if has_photo:
+            # Create table with 2 columns: info (left) + photo (right)
+            table = self.doc.add_table(rows=1, cols=2)
+            table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            self._remove_table_borders(table)
+            
+            # Set column widths
+            table.columns[0].width = Inches(5.0)
+            table.columns[1].width = Inches(1.5)
+            
+            left_cell = table.rows[0].cells[0]
+            right_cell = table.rows[0].cells[1]
+            
+            # Left cell: Name, title, contact
+            name_p = left_cell.paragraphs[0]
+            name_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            name_run = name_p.add_run(personal.get('name', 'Your Name').upper())
+            name_run.bold = True
+            name_run.font.size = self.FONT_SIZES['name']
+            name_run.font.color.rgb = self.COLORS['primary']
+            
+            title_p = left_cell.add_paragraph()
+            title_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            title_p.paragraph_format.space_before = Pt(2)
+            title_p.paragraph_format.space_after = Pt(6)
+            title_run = title_p.add_run(personal.get('title', 'Professional Title'))
+            title_run.font.size = self.FONT_SIZES['title']
+            title_run.font.color.rgb = self.COLORS['secondary']
+            
+            # Contact line 1
+            contact_parts = []
+            if personal.get('email'):
+                contact_parts.append(personal['email'])
+            if personal.get('phone'):
+                contact_parts.append(personal['phone'])
+            if personal.get('location'):
+                contact_parts.append(personal['location'])
+            
+            if contact_parts:
+                contact_p = left_cell.add_paragraph()
+                contact_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                contact_p.paragraph_format.space_after = Pt(2)
+                contact_run = contact_p.add_run("  |  ".join(contact_parts))
+                contact_run.font.size = self.FONT_SIZES['small']
+            
+            # Links line 2
+            link_parts = []
+            if personal.get('github'):
+                link_parts.append(personal['github'])
+            if personal.get('linkedin'):
+                link_parts.append(personal['linkedin'])
+            if personal.get('portfolio'):
+                link_parts.append(personal['portfolio'])
+            
+            if link_parts:
+                links_p = left_cell.add_paragraph()
+                links_p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                links_p.paragraph_format.space_before = Pt(0)
+                links_run = links_p.add_run("  |  ".join(link_parts))
+                links_run.font.size = self.FONT_SIZES['small']
+            
+            # Right cell: Photo
+            photo_p = right_cell.paragraphs[0]
+            photo_p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run = photo_p.add_run()
+            run.add_picture(self.photo_path, height=Inches(1.4))
+            
+            # Add spacing after table
+            spacing_p = self.doc.add_paragraph()
+            spacing_p.paragraph_format.space_after = Pt(6)
         
-        # Contact line 1
-        contact_parts = []
-        if personal.get('email'):
-            contact_parts.append(personal['email'])
-        if personal.get('phone'):
-            contact_parts.append(personal['phone'])
-        if personal.get('location'):
-            contact_parts.append(personal['location'])
-        
-        if contact_parts:
-            contact_p = self.doc.add_paragraph()
-            contact_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            contact_p.paragraph_format.space_after = Pt(2)
-            contact_run = contact_p.add_run("  |  ".join(contact_parts))
-            contact_run.font.size = self.FONT_SIZES['small']
-        
-        # Links line 2
-        link_parts = []
-        if personal.get('github'):
-            link_parts.append(personal['github'])
-        if personal.get('linkedin'):
-            link_parts.append(personal['linkedin'])
-        if personal.get('portfolio'):
-            link_parts.append(personal['portfolio'])
-        
-        if link_parts:
-            links_p = self.doc.add_paragraph()
-            links_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            links_p.paragraph_format.space_before = Pt(0)
-            links_p.paragraph_format.space_after = Pt(10)
-            links_run = links_p.add_run("  |  ".join(link_parts))
-            links_run.font.size = self.FONT_SIZES['small']
+        else:
+            # No photo: centered layout (original)
+            name_p = self.doc.add_paragraph()
+            name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            name_p.paragraph_format.space_after = Pt(2)
+            name_run = name_p.add_run(personal.get('name', 'Your Name').upper())
+            name_run.bold = True
+            name_run.font.size = self.FONT_SIZES['name']
+            name_run.font.color.rgb = self.COLORS['primary']
+            
+            title_p = self.doc.add_paragraph()
+            title_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            title_p.paragraph_format.space_before = Pt(0)
+            title_p.paragraph_format.space_after = Pt(6)
+            title_run = title_p.add_run(personal.get('title', 'Professional Title'))
+            title_run.font.size = self.FONT_SIZES['title']
+            title_run.font.color.rgb = self.COLORS['secondary']
+            
+            # Contact line 1
+            contact_parts = []
+            if personal.get('email'):
+                contact_parts.append(personal['email'])
+            if personal.get('phone'):
+                contact_parts.append(personal['phone'])
+            if personal.get('location'):
+                contact_parts.append(personal['location'])
+            
+            if contact_parts:
+                contact_p = self.doc.add_paragraph()
+                contact_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                contact_p.paragraph_format.space_after = Pt(2)
+                contact_run = contact_p.add_run("  |  ".join(contact_parts))
+                contact_run.font.size = self.FONT_SIZES['small']
+            
+            # Links line 2
+            link_parts = []
+            if personal.get('github'):
+                link_parts.append(personal['github'])
+            if personal.get('linkedin'):
+                link_parts.append(personal['linkedin'])
+            if personal.get('portfolio'):
+                link_parts.append(personal['portfolio'])
+            
+            if link_parts:
+                links_p = self.doc.add_paragraph()
+                links_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                links_p.paragraph_format.space_before = Pt(0)
+                links_p.paragraph_format.space_after = Pt(10)
+                links_run = links_p.add_run("  |  ".join(link_parts))
+                links_run.font.size = self.FONT_SIZES['small']
     
     def build_summary(self):
         """Build the professional summary section."""
@@ -330,6 +419,11 @@ def main():
         choices=['en', 'es'],
         help='Language for section headers: en (English) or es (Spanish) (default: en)'
     )
+    parser.add_argument(
+        '--photo', '-p',
+        default=None,
+        help='Path to a profile photo (jpg/png) to include in the header (optional)'
+    )
     
     args = parser.parse_args()
     
@@ -337,11 +431,16 @@ def main():
     script_dir = Path(__file__).parent
     input_path = Path(args.input)
     output_path = Path(args.output)
+    photo_path = None
     
     if not input_path.is_absolute():
         input_path = script_dir / input_path
     if not output_path.is_absolute():
         output_path = script_dir / output_path
+    if args.photo:
+        photo_path = Path(args.photo)
+        if not photo_path.is_absolute():
+            photo_path = script_dir / photo_path
     
     # Load data
     if not input_path.exists():
@@ -356,8 +455,9 @@ def main():
     
     # Generate CV
     lang_name = 'English' if args.lang == 'en' else 'Spanish'
-    print(f"Generating ATS-optimized CV in {lang_name}...")
-    generator = CVGenerator(data, language=args.lang)
+    photo_msg = f" with photo" if photo_path and photo_path.exists() else ""
+    print(f"Generating ATS-optimized CV in {lang_name}{photo_msg}...")
+    generator = CVGenerator(data, language=args.lang, photo_path=str(photo_path) if photo_path else None)
     generator.generate(str(output_path))
     
     print(f"CV successfully generated: {output_path.name}")

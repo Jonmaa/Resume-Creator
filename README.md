@@ -7,6 +7,7 @@ Generate professional, **ATS-friendly** (Applicant Tracking System) CVs in Word 
 - **ATS-Optimized**: Clean, single-column layout that ATS systems can parse easily
 - **Single Page**: Compact design that fits everything on one page
 - **Multi-Language**: Generate CVs in English or Spanish
+- **Profile Photo**: Optional photo support with automatic layout adjustment
 - **Customizable**: Edit `cv_data.json` with your information
 - **Professional Design**: Clean typography with proper hierarchy
 - **Easy to Use**: Just edit JSON and run the script
@@ -52,8 +53,11 @@ python generate_cv.py
 # Spanish
 python generate_cv.py --lang es
 
-# Spanish with Spanish data file
-python generate_cv.py --input cv_data_es.json --lang es --output CV_Spanish.docx
+# With profile photo
+python generate_cv.py --photo image.jpg
+
+# Full example: Spanish CV with photo
+python generate_cv.py --input cv_data_es.json --lang es --photo image.jpg --output CV_Spanish.docx
 ```
 
 ## 📁 Project Structure
@@ -154,6 +158,23 @@ python generate_cv.py --input cv_data_es.json --lang es --output CV_Spanish.docx
 | `--input` | `-i` | `cv_data.json` | Input JSON file path |
 | `--output` | `-o` | `CV_Optimized_ATS.docx` | Output Word file path |
 | `--lang` | `-l` | `en` | Language for section headers (`en` or `es`) |
+| `--photo` | `-p` | None | Path to profile photo (jpg/png) |
+
+## 📷 Profile Photo
+
+You can include a profile photo in your CV:
+
+```bash
+python generate_cv.py --photo photo.jpg
+```
+
+**Layout behavior:**
+- **With photo**: Name and contact info aligned left, photo on the right
+- **Without photo**: Centered layout (traditional CV style)
+
+**Supported formats:** JPG, PNG
+
+> ⚠️ **Note for ATS**: Some ATS systems cannot process images. Consider generating two versions - one with photo for direct applications, one without for ATS portals.
 
 ## 🌍 Multi-Language Support
 
